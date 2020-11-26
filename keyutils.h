@@ -24,7 +24,7 @@
 #include <unistd.h>
 
 typedef int32_t key_serial_t;
-#define KEYCTL_GET_KEYRING_ID 0 /* ask for a keyring's ID */
+#define KEYCTL_GET_KEYRING_ID 0     /* ask for a keyring's ID */
 #define KEY_SPEC_SESSION_KEYRING -3 /* current session keyring */
 
 static inline key_serial_t add_key(const char *type, const char *description,

@@ -23,19 +23,19 @@
 # e.g. make PREFIX=/usr or PREFIX=/usr make.
 
 # Installation path prefix
-PREFIX := /usr/local
+PREFIX ?= /usr/local
 
 # Directory where the binary gets installed
-BINDIR := $(PREFIX)/bin
+BINDIR ?= $(PREFIX)/bin
 
 # C compiler flags
-CFLAGS := -O2 -Wall
+CFLAGS ?= -O2 -Wall
 
 # C preprocessor flags
-CPPFLAGS :=
+CPPFLAGS ?=
 
 # Linker flags
-LDFLAGS :=
+LDFLAGS ?=
 
 ##############################################################################
 
@@ -117,7 +117,7 @@ test-setup:test-teardown
 	@echo "$(TEST_DIR) is now set up."
 
 test-teardown:
-	if mountpoint "$(TEST_DIR)" &> /dev/null; then \
+	if mountpoint --quiet "$(TEST_DIR)"; then \
 		sudo umount "$(TEST_DIR)"; \
 	fi
 	rm -rf "$(TEST_DIR)"
@@ -127,11 +127,6 @@ test-all:
 	$(MAKE) test-setup
 	$(MAKE) test
 	$(MAKE) test-teardown
-
-.PHONY: travis-install travis-script
-travis-install: test-setup
-
-travis-script: format-check fscryptctl test
 
 ##############################################################################
 
