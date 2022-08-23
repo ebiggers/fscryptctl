@@ -1,0 +1,77 @@
+#!/bin/bash
+
+set -e -u -o pipefail
+
+create_partitions()
+{
+	local userdata disk partnum part_size
+
+	userdata=$(basename $(readlink -f /dev/disk/by-partlabel/userdata))
+	disk=$(echo $userdata | sed 's/[0-9]*$//')
+	partnum=$(echo $userdata | grep -o '[0-9]*$')
+	echo "userdata is /dev/$userdata (partition $partnum on disk /dev/$disk)"
+	part_size=$(( 8 * $(tune2fs -l /dev/$userdata | awk '/Block count/{print $3}') ))
+	start=$(</sys/class/block/$userdata/start)
+
+	echo "Root filesystem is $part_size sectors starting at $start"
+	resizepart /dev/$disk $partnum $part_size
+	(( start += part_size ))
+	partnum=100
+
+	part_size=10485760
+	echo "TEST_DEV is /dev/$disk$partnum: $part_size sectors starting at $start"
+	if [ -e /dev/$disk$partnum ]; then
+		delpart /dev/$disk $partnum
+	fi
+	addpart /dev/$disk $partnum $start $part_size
+	ln -sf /dev/$disk$partnum /dev/TEST_DEV
+	(( start += part_size ))
+	(( partnum++ ))
+
+	part_size=10485760
+	echo "SCRATCH_DEV is /dev/$disk$partnum: $part_size sectors starting at $start"
+	if [ -e /dev/$disk$partnum ]; then
+		delpart /dev/$disk $partnum
+	fi
+	addpart /dev/$disk $partnum $start $part_size
+	ln -sf /dev/$disk$partnum /dev/SCRATCH_DEV
+	(( start += part_size ))
+	(( partnum++ ))
+}
+
+if [ ! -e /dev/TEST_DEV ]; then
+	create_partitions
+fi
+
+F2FS=false
+while (( $# > 0 )); do
+	case $1 in
+	--update)
+		( cd ~/xfstests-dev && make -j8 install )
+		;;
+	--f2fs)
+		F2FS=true
+		;;
+	*)
+		break
+		;;
+	esac
+	shift
+done
+
+export TEST_DEV=$(readlink -f /dev/TEST_DEV)
+export TEST_DIR=/mnt/test
+export SCRATCH_DEV=$(readlink -f /dev/SCRATCH_DEV)
+export SCRATCH_MNT=/mnt/scratch
+mkdir -p $TEST_DIR $SCRATCH_MNT
+if $F2FS; then
+	if ! dump.f2fs $TEST_DEV 2>/dev/null | grep -q '\<encrypt\>'; then
+		mkfs.f2fs -f -O encrypt $TEST_DEV
+	fi
+else
+	if ! tune2fs -l $TEST_DEV 2>/dev/null | grep -q '\<encrypt\>'; then
+		mkfs.ext4 -F -O encrypt $TEST_DEV
+	fi
+fi
+cd /usr/local/xfstests
+./check "$@"
