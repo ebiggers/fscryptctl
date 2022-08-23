@@ -41,6 +41,8 @@
 #endif
 
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof((array)[0]))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 static void *xzalloc(size_t size) {
   void *ptr = calloc(1, size);
@@ -99,6 +101,7 @@ enum {
   OPT_CONTENTS,
   OPT_DIRECT_KEY,
   OPT_FILENAMES,
+  OPT_HW_WRAPPED_KEY,
   OPT_IV_INO_LBLK_32,
   OPT_IV_INO_LBLK_64,
   OPT_PADDING,
@@ -129,6 +132,9 @@ static void __attribute__((__noreturn__)) usage(FILE *out) {
       "        print this help screen\n"
       "    -v, --version\n"
       "        print the version of fscrypt\n"
+      "    add_key\n"
+      "        --hw-wrapped-key\n"
+      "            adding a hardware-wrapped key (rather than a standard key)\n"
       "    remove_key\n"
       "        --all-users\n"
       "            force-remove all users' claims to the key (requires root)\n"
@@ -145,6 +151,8 @@ static void __attribute__((__noreturn__)) usage(FILE *out) {
       "            optimize for UFS inline crypto hardware\n"
       "        --iv-ino-lblk-32\n"
       "            optimize for eMMC inline crypto hardware (not recommended)\n"
+      "        --hw-wrapped-key\n"
+      "            policy uses a hardware-wrapped key\n"
       "\nNotes:\n"
       "  Keys are identified by 32-character hex strings (key identifiers).\n"
       "\n"
@@ -402,20 +410,38 @@ static bool set_policy(const char *path,
 // -----------------------------------------------------------------------------
 
 static int cmd_add_key(int argc, char *const argv[]) {
-  handle_no_options(&argc, &argv);
+  static const struct option add_key_options[] = {
+      {"hw-wrapped-key", no_argument, NULL, OPT_HW_WRAPPED_KEY},
+      {NULL, 0, NULL, 0}};
+  int max_size = FSCRYPT_MAX_KEY_SIZE;
+  __u32 flags = 0;
+
+  int ch;
+  while ((ch = getopt_long(argc, argv, "", add_key_options, NULL)) != -1) {
+    switch (ch) {
+      case OPT_HW_WRAPPED_KEY:
+        flags |= FSCRYPT_ADD_KEY_FLAG_HW_WRAPPED;
+        max_size = MAX_WRAPPED_KEY_SIZE;
+        break;
+      default:
+        usage(stderr);
+    }
+  }
+  argc -= optind;
+  argv += optind;
   if (argc != 1) {
     fputs("error: must specify a single mountpoint\n", stderr);
     return EXIT_FAILURE;
   }
   const char *mountpoint = argv[0];
 
-  struct fscrypt_add_key_arg *arg =
-      xzalloc(sizeof(*arg) + FSCRYPT_MAX_KEY_SIZE);
+  struct fscrypt_add_key_arg *arg = xzalloc(sizeof(*arg) + max_size);
   int status = EXIT_FAILURE;
-  arg->raw_size = read_key(arg->raw, FSCRYPT_MAX_KEY_SIZE);
+  arg->raw_size = read_key(arg->raw, max_size);
   if (arg->raw_size == 0) {
     goto cleanup;
   }
+  arg->flags = flags;
   arg->key_spec.type = FSCRYPT_KEY_SPEC_TYPE_IDENTIFIER;
 
   int fd = open(mountpoint, O_RDONLY | O_CLOEXEC);
@@ -652,6 +678,7 @@ static int cmd_set_policy(int argc, char *const argv[]) {
       {"direct-key", no_argument, NULL, OPT_DIRECT_KEY},
       {"iv-ino-lblk-64", no_argument, NULL, OPT_IV_INO_LBLK_64},
       {"iv-ino-lblk-32", no_argument, NULL, OPT_IV_INO_LBLK_32},
+      {"hw-wrapped-key", no_argument, NULL, OPT_HW_WRAPPED_KEY},
       {NULL, 0, NULL, 0}};
 
   int ch, padding_flag;
@@ -687,6 +714,9 @@ static int cmd_set_policy(int argc, char *const argv[]) {
       case OPT_IV_INO_LBLK_32:
         printf("warning: --iv-ino-lblk-32 should normally not be used\n");
         flags |= FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32;
+        break;
+      case OPT_HW_WRAPPED_KEY:
+        flags |= FSCRYPT_POLICY_FLAG_HW_WRAPPED_KEY;
         break;
       default:
         usage(stderr);

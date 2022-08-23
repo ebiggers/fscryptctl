@@ -40,7 +40,7 @@ feature, see the references at the end of this page.
 
 # SUBCOMMANDS
 
-## **fscryptctl add_key** *MOUNTPOINT*
+## **fscryptctl add_key** [*OPTION*...] *MOUNTPOINT*
 
 Add an encryption key to the given mounted filesystem.  This will "unlock" any
 files and directories that are protected by the given key on the given
@@ -54,7 +54,12 @@ If successful, **fscryptctl add_key** will print the key identifier of the newly
 added key; this will be a 32-character hex string which can be passed to other
 **fscryptctl** commands.
 
-**fscryptctl add_key** does not accept any options.
+Options accepted by **fscryptctl add_key**:
+
+**\-\-hw\-wrapped\-key**
+:   Adding a hardware-wrapped key.  If this option is given, the key must be a
+    hardware-wrapped key in ephemerally-wrapped form, rather than a standard
+    (plaintext) key.
 
 ## **fscryptctl remove_key** [*OPTION*...] *KEY_IDENTIFIER* *MOUNTPOINT*
 
@@ -138,6 +143,9 @@ Options accepted by **fscryptctl set_policy**:
 **\-\-iv\-ino\-lblk\-32**
 :   Optimize for eMMC inline encryption hardware.  For details, see the Linux
     kernel documentation for `FSCRYPT_POLICY_FLAG_IV_INO_LBLK_32`.
+
+**\-\-hw\-wrapped\-key**
+:   Policy uses a hardware-wrapped key (rather than a standard key)
 
 # SEE ALSO
 
