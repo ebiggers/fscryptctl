@@ -9,7 +9,10 @@ fscryptctl - low-level userspace tool for Linux filesystem encryption
 **fscryptctl remove_key** [*OPTION*...] *KEY_IDENTIFIER* *MOUNTPOINT* \
 **fscryptctl key_status** *KEY_IDENTIFIER* *MOUNTPOINT* \
 **fscryptctl get_policy** *PATH* \
-**fscryptctl set_policy** [*OPTION*...] *KEY_IDENTIFIER* *DIRECTORY*
+**fscryptctl set_policy** [*OPTION*...] *KEY_IDENTIFIER* *DIRECTORY* \
+**fscryptctl import_hw_wrapped_key** *BLOCK_DEVICE* \
+**fscryptctl generate_hw_wrapped_key** *BLOCK_DEVICE* \
+**fscryptctl prepare_hw_wrapped_key** *BLOCK_DEVICE*
 
 # DESCRIPTION
 
@@ -146,6 +149,39 @@ Options accepted by **fscryptctl set_policy**:
 
 **\-\-hw\-wrapped\-key**
 :   Policy uses a hardware-wrapped key (rather than a standard key)
+
+## **fscryptctl import_hw_wrapped_key** *BLOCK_DEVICE*
+
+Create a hardware-wrapped inline encryption key by importing a raw key, turning
+it into a long-term wrapped key.  The raw key is read from standard input and
+the long-term wrapped key is written to standard output, both as raw binary.
+
+This subcommand is a thin wrapper around the **BLKCRYPTOIMPORTKEY** ioctl.  For
+more information, see the kernel documentation.
+
+**fscryptctl import_hw_wrapped_key** does not accept any options.
+
+## **fscryptctl generate_hw_wrapped_key** *BLOCK_DEVICE*
+
+Create a hardware-wrapped inline encryption key by having the hardware generate
+it.  The new long-term wrapped key is written to standard output as raw binary.
+
+This subcommand is a thin wrapper around the **BLKCRYPTOGENERATEKEY** ioctl.
+For more information, see the kernel documentation.
+
+**fscryptctl generate_hw_wrapped_key** does not accept any options.
+
+## **fscryptctl prepare_hw_wrapped_key** *BLOCK_DEVICE*
+
+Prepares a hardware-wrapped inline encryption key to be used by converting it
+from long-term wrapped form to ephemerally-wrapped form.  The long-term wrapped
+key is read from standard input and the ephemerally-wrapped key is written to
+standard output, both as raw binary.
+
+This subcommand is a thin wrapper around the **BLKCRYPTOPREPAREKEY** ioctl.  For
+more information, see the kernel documentation.
+
+**fscryptctl prepare_hw_wrapped_key** does not accept any options.
 
 # SEE ALSO
 
