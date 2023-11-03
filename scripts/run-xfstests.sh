@@ -4,14 +4,14 @@ set -e -u -o pipefail
 
 create_partitions()
 {
-	local userdata disk partnum part_size
+	local rootfs disk partnum part_size
 
-	userdata=$(basename $(readlink -f /dev/disk/by-partlabel/userdata))
-	disk=$(echo $userdata | sed 's/[0-9]*$//')
-	partnum=$(echo $userdata | grep -o '[0-9]*$')
-	echo "userdata is /dev/$userdata (partition $partnum on disk /dev/$disk)"
-	part_size=$(( 8 * $(tune2fs -l /dev/$userdata | awk '/Block count/{print $3}') ))
-	start=$(</sys/class/block/$userdata/start)
+	rootfs=$(basename $(findmnt / -o SOURCE -n))
+	disk=$(echo $rootfs | sed 's/[0-9]*$//')
+	partnum=$(echo $rootfs | grep -o '[0-9]*$')
+	echo "rootfs is /dev/$rootfs (partition $partnum on disk /dev/$disk)"
+	part_size=$(( 8 * $(tune2fs -l /dev/$rootfs | awk '/Block count/{print $3}') ))
+	start=$(</sys/class/block/$rootfs/start)
 
 	echo "Root filesystem is $part_size sectors starting at $start"
 	resizepart /dev/$disk $partnum $part_size
@@ -73,5 +73,5 @@ else
 		mkfs.ext4 -F -O encrypt $TEST_DEV
 	fi
 fi
-cd /usr/local/xfstests
+cd /var/lib/xfstests
 ./check "$@"
