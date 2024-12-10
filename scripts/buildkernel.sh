@@ -26,14 +26,14 @@ if [ ! -e MAINTAINERS ]; then
 	exit 1
 fi
 
-cp $SCRIPTDIR/kconfig .config
+cp "$SCRIPTDIR/kconfig" .config
 $MAKE olddefconfig
 $MAKE Image.gz dtbs
 echo placeholder > ramdisk
 cat arch/arm64/boot/Image.gz \
-    arch/arm64/boot/dts/qcom/$BOARD-hdk.dtb > Image.gz+dtb
+    arch/arm64/boot/dts/qcom/"$BOARD-hdk.dtb" > Image.gz+dtb
 mkbootimg --kernel Image.gz+dtb \
-	--cmdline "earlycon root=/dev/sda11 rw" \
+	--cmdline "earlycon console=ttyMSM0 root=/dev/sda11 rw" \
 	--ramdisk ramdisk \
 	--base 0x80000000 \
 	--pagesize 2048 \
